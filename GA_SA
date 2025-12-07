@@ -1,0 +1,39 @@
+#Program 8 – Genetic Algorithm & Simulated Annealing for Hyperparameter Optimization
+ import numpy as np
+from sklearn.datasets import load_breast_cancer
+from sklearn.model_selection import cross_val_score
+from sklearn.linear_model import LogisticRegression
+from sklearn.preprocessing import StandardScaler
+from sklearn.pipeline import make_pipeline
+
+X, y = load_breast_cancer(return_X_y=True)
+def acc(C, I):
+    model = make_pipeline(StandardScaler(), LogisticRegression(C=C, max_iter=int(I), solver='lbfgs'))
+    return np.mean(cross_val_score(model, X, y, cv=3))
+
+epochs = 5
+
+print("=== Genetic Algorithm ===")
+best_ga, best_acc_ga = (1, 300), 0
+for e in range(epochs):
+    pop = [(np.random.uniform(0.1,10), np.random.uniform(100,800)) for _ in range(5)]
+    scores = [acc(c,i) for c,i in pop]
+    if max(scores) > best_acc_ga:
+        best_acc_ga = max(scores)
+        best_ga = pop[np.argmax(scores)]
+    print(f"Epoch {e+1}: acc = {best_acc_ga:.4f}")
+
+print("\n=== Simulated Annealing ===")
+C, I, T = 1, 300, 1
+bestA = acc(C, I)
+for e in range(epochs):
+    nC = np.clip(C + np.random.randn()*0.3, 0.1, 10)
+    nI = np.clip(I + np.random.randn()*30, 100, 800)
+    newA = acc(nC, nI)
+    if newA > bestA or np.exp((newA-bestA)/T) > np.random.rand():
+        C, I, bestA = nC, nI, newA
+    print(f"Epoch {e+1}: acc = {bestA:.4f}")
+    T *= 0.8
+
+print(f"\nGA Best: C={best_ga[0]:.2f}, iter={best_ga[1]:.0f}, acc={best_acc_ga:.4f}")
+print(f"SA Best: C={C:.2f}, iter={I:.0f}, acc={bestA:.4f}")
