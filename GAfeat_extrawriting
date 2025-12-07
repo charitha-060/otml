@@ -1,0 +1,18 @@
+print("\n=== Genetic Algorithm for Feature Selection ===")
+
+X2, y2 = fetch_openml('mnist_784', version=1, return_X_y=True, parser="pandas")
+X2, y2 = X2[:2000], y2[:2000].astype(int)
+X2 = StandardScaler().fit_transform(X2)
+
+def fitness(ch):
+    if ch.sum() == 0: return 0
+    return cross_val_score(LogisticRegression(max_iter=200),
+                           X2[:, ch==1], y2, cv=3).mean()
+
+# GA Steps: create population → evaluate → crossover → mutation (short version)
+pop = np.random.randint(0, 2, (5, X2.shape[1]))
+fit = np.array([fitness(c) for c in pop])
+best = pop[np.argmax(fit)]
+
+print("Selected Features:", best.sum())
+print("Best Accuracy:", fit.max())
