@@ -1,0 +1,78 @@
+#Program 5-Gradient Descent with SGD,Mini-Batch Gradient descent
+# ---------------- IMPORTS ----------------
+import numpy as np
+import matplotlib.pyplot as plt
+from sklearn.datasets import fetch_california_housing
+from sklearn.metrics import mean_squared_error, mean_absolute_error, r2_score
+from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import StandardScaler
+
+# ---------------- LOAD BUILT-IN DATA ----------------
+X, y = fetch_california_housing(return_X_y=True)
+
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+
+scaler = StandardScaler()
+X_train = scaler.fit_transform(X_train)
+X_test = scaler.transform(X_test)
+
+# ---------------- GRADIENT DESCENT FUNCTION ----------------
+def train_model(X, y, method="batch", lr=0.01, epochs=60, batch_size=32):
+    n_samples, n_features = X.shape
+    w, b = np.zeros(n_features), 0
+    losses = []
+
+    for _ in range(epochs):
+        if method == "batch":
+            Xb, yb = X, y
+        elif method == "sgd":
+            idx = np.random.randint(0, n_samples)
+            Xb, yb = X[idx:idx+1], y[idx:idx+1]
+        else:
+            idx = np.random.choice(n_samples, batch_size, replace=False)
+            Xb, yb = X[idx], y[idx]
+
+        pred = Xb.dot(w) + b
+        dw = -(2/len(Xb)) * Xb.T.dot(yb - pred)
+        db = -(2/len(Xb)) * np.sum(yb - pred)
+
+        w -= lr * dw
+        b -= lr * db
+
+        loss = mean_squared_error(y, X.dot(w) + b)
+        losses.append(loss)
+
+    return w, b, losses
+
+# ---------------- TRAIN MODELS ----------------
+w_b, b_b, loss_b = train_model(X_train, y_train, "batch")
+w_s, b_s, loss_s = train_model(X_train, y_train, "sgd")
+w_m, b_m, loss_m = train_model(X_train, y_train, "mini")
+
+# ---------------- EVALUATION ----------------
+def evaluate(w, b):
+    yp = X_test.dot(w) + b
+    return (
+        mean_squared_error(y_test, yp),
+        mean_absolute_error(y_test, yp),
+        r2_score(y_test, yp)
+    )
+
+results = {
+    "Batch GD": evaluate(w_b, b_b),
+    "SGD": evaluate(w_s, b_s),
+    "Mini-Batch GD": evaluate(w_m, b_m)
+}
+
+print("\n📌 Evaluation (MSE, MAE, R²):")
+for name, scores in results.items():
+    print(f"{name}: {scores}")
+
+# ---------------- PLOT ----------------
+plt.plot(loss_b, label="Batch GD")
+plt.plot(loss_s, label="SGD")
+plt.plot(loss_m, label="Mini-Batch GD")
+plt.xlabel("Epochs"); plt.ylabel("Loss (MSE)")
+plt.title("Gradient Descent Comparison")
+plt.legend(); plt.grid(True)
+plt.show()
