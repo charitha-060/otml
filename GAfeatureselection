@@ -1,0 +1,44 @@
+#9- Additional Genetic Algorithm for Feature Selection
+import numpy as np
+from sklearn.datasets import fetch_openml
+from sklearn.linear_model import LogisticRegression
+from sklearn.model_selection import cross_val_score
+from sklearn.preprocessing import StandardScaler
+
+# 1️⃣ Load MNIST dataset (small subset for speed)
+X, y = fetch_openml('mnist_784', version=1, return_X_y=True, parser="pandas")
+X, y = X[:2000], y[:2000].astype(int)
+X = StandardScaler().fit_transform(X)
+n_features = X.shape[1]
+
+# 2️⃣ Fitness function: model accuracy using selected features
+def fitness(chrom):
+    if chrom.sum() == 0:
+        return 0
+    X_sel = X[:, chrom == 1]
+    model = LogisticRegression(max_iter=200, solver='liblinear')
+    return cross_val_score(model, X_sel, y, cv=3).mean()
+
+# 3️⃣ Genetic Algorithm
+pop_size, gens = 6, 5
+pop = np.random.randint(0, 2, (pop_size, n_features))
+
+for g in range(gens):
+    fit = np.array([fitness(c) for c in pop])
+    best = pop[np.argmax(fit)]
+    print(f"Generation {g+1} Best Accuracy = {fit.max():.4f}")
+    new_pop = []
+    for _ in range(pop_size):
+        p1 = pop[np.random.randint(pop_size)]
+        p2 = pop[np.random.randint(pop_size)]
+        cut = np.random.randint(1, n_features - 1)
+        child = np.concatenate([p1[:cut], p2[cut:]])
+        if np.random.rand() < 0.05:
+            child[np.random.randint(n_features)] ^= 1
+        new_pop.append(child)
+    pop = np.array(new_pop)
+
+# 4️⃣ Final best subset and accuracy
+best_acc = fitness(best)
+print("\n✅ Final Best Accuracy:", round(best_acc, 4))
+print("✅ Selected Features:", np.sum(best), "out of", n_features)
