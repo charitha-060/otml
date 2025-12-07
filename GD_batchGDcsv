@@ -1,0 +1,84 @@
+#Propgram 4 -Implement the different Gradient Descent with Batch Gradient Descent using .csv dataset (for regression)
+import numpy as np
+import pandas as pd
+import matplotlib.pyplot as plt
+from sklearn.datasets import fetch_california_housing
+from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import StandardScaler
+
+# --- 1. SETUP AND DATA PREPARATION (Simulating .csv Load) ---
+print("--- 1. Data Preparation ---")
+# Using California Housing dataset (standard regression data)
+housing = fetch_california_housing(as_frame=True)
+X = housing.data
+y = housing.target
+
+# Add a column of ones for the intercept term (theta_0)
+X['Intercept'] = 1
+X = X.values # Convert to NumPy array
+y = y.values.reshape(-1, 1) # Reshape y to (n_samples, 1)
+
+# Split and Scale the data
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+
+scaler = StandardScaler()
+# Scale all features except the last column (the intercept column of 1s)
+X_train[:, :-1] = scaler.fit_transform(X_train[:, :-1])
+X_test[:, :-1] = scaler.transform(X_test[:, :-1])
+
+# Initial parameters
+m, n = X_train.shape
+theta = np.zeros((n, 1)) # Initialize weights (theta) to zero
+
+print(f"Training samples (m): {m}, Features (n): {n - 1}\n")
+
+# --- 2. BATCH GRADIENT DESCENT IMPLEMENTATION ---
+def batch_gradient_descent(X, y, theta, learning_rate, n_iterations):
+    """
+    Performs Batch Gradient Descent to minimize the Mean Squared Error (MSE).
+    """
+    m = len(y)
+    cost_history = []
+
+    for i in range(n_iterations):
+        # 1. Hypothesis (Prediction)
+        predictions = X @ theta # h_theta(x) = X * theta
+
+        # 2. Calculate Loss (Error)
+        error = predictions - y
+
+        # 3. Calculate Gradient (over the ENTIRE batch, size m)
+        # Gradient = (2/m) * X_transpose * error
+        gradient = (2/m) * X.T @ error
+
+        # 4. Update Weights (simultaneously)
+        theta = theta - learning_rate * gradient
+
+        # 5. Calculate Cost (MSE) and store
+        cost = np.sum(error**2) / m
+        cost_history.append(cost)
+
+    return theta, cost_history
+
+# --- 3. EXECUTE AND EVALUATE ---
+learning_rate = 0.01
+n_iterations = 1000
+
+print(f"--- 3. Running BGD ({n_iterations} iterations) ---")
+final_theta, cost_history = batch_gradient_descent(
+    X_train, y_train, theta, learning_rate, n_iterations
+)
+
+print(f"Final Cost (MSE): {cost_history[-1]:.4f}")
+print(f"Final Weights (theta):\n{final_theta.flatten()}")
+
+# --- 4. VISUALIZATION ---
+
+plt.figure(figsize=(10, 6))
+plt.plot(range(n_iterations), cost_history, color='blue', label='Cost Function (MSE)')
+plt.title('Batch Gradient Descent: Cost Convergence')
+plt.xlabel('Number of Iterations')
+plt.ylabel('Cost (MSE)')
+plt.legend()
+plt.grid(True)
+plt.show()
