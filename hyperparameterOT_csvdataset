@@ -1,0 +1,62 @@
+#Program 3- Implement the Hyper-parameter optimization techniques using any .csv dataset
+import seaborn as sns
+import numpy as np
+import matplotlib.pyplot as plt
+from sklearn.model_selection import train_test_split, GridSearchCV, RandomizedSearchCV
+from sklearn.metrics import accuracy_score, confusion_matrix
+from sklearn.svm import SVC
+from sklearn.datasets import load_breast_cancer
+import pandas as pd
+
+# ------------ DATASET --------------
+data = load_breast_cancer()
+X, y = data.data, data.target
+
+X_train, X_test, y_train, y_test = train_test_split(
+    X, y, test_size=0.3, random_state=42, stratify=y
+)
+
+# ------------ 1️⃣ Grid Search --------------
+grid_params = {
+    "C": [0.1, 1, 10],
+    "kernel": ["linear", "rbf"]
+}
+grid = GridSearchCV(SVC(), grid_params, cv=3)
+grid.fit(X_train, y_train)
+grid_acc = accuracy_score(y_test, grid.predict(X_test))
+
+# ------------ 2️⃣ Random Search --------------
+rand_params = {
+    "C": np.linspace(0.1, 10, 20),
+    "kernel": ["linear", "rbf"]
+}
+rand = RandomizedSearchCV(SVC(), rand_params, cv=3, n_iter=10)
+rand.fit(X_train, y_train)
+rand_acc = accuracy_score(y_test, rand.predict(X_test))
+
+# ------------ STORE RESULTS --------------
+results_df = pd.DataFrame({
+    "Method": ["Grid Search", "Random Search"],
+    "Accuracy": [grid_acc, rand_acc]
+})
+
+print(results_df)
+print("\nBest Parameters:")
+print("Grid:", grid.best_params_)
+print("Random:", rand.best_params_)
+
+# ------------ CONFUSION MATRIX FOR BEST MODEL --------------
+best_model = rand if rand_acc > grid_acc else grid
+cm = confusion_matrix(y_test, best_model.predict(X_test))
+
+plt.figure(figsize=(5,4))
+sns.heatmap(cm, annot=True, fmt='d', cmap='Blues')
+plt.title("Confusion Matrix (Best Model)")
+plt.show()
+
+# ------------ ACCURACY COMPARISON PLOT --------------
+plt.figure(figsize=(8,5))
+results_df.set_index("Method")["Accuracy"].plot(kind="bar")
+plt.title("Hyperparameter Optimization Accuracy Comparison")
+plt.ylabel("Accuracy")
+plt.show()
